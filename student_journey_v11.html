@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking and Supporting LUMS First Years</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f8f7f4; --surface:#ffffff; --border:#e0dbd2;
+  --ink:#1e2433; --ink2:#4a5165; --ink3:#8a90a0;
+  --navy:#1e2d4a; --teal:#0d7a6e; --teal-lt:#e0f0ed;
+  --orange:#c0521a; --orange-lt:#fdeee6;
+  --red:#b03030; --red-lt:#fde8e8;
+  --crimson:#7a1a1a; --crimson-lt:#f5e0e0;
+  --slate:#3d4f6a; --slate-lt:#eef1f5;
+  --green:#1a7a4a; --green-lt:#e0f0e8;
+  --grey:#8a96a8; --grey-lt:#f0f2f4;
+  --amber:#c97c1a; --amber-lt:#fef3e2;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* HEADER */
+header{flex-shrink:0;height:50px;padding:0 20px;border-bottom:1.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+header h1{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy);}
+header p{font-size:0.58rem;color:var(--ink3);margin-top:1px;}
+.legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.leg{display:flex;align-items:center;gap:5px;font-size:0.57rem;color:var(--ink3);}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.leg-role{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.leg-role svg{stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+/* NARRATIVE */
+.narrative-bar{flex-shrink:0;background:var(--surface);border-bottom:1.5px solid var(--border);padding:8px 24px;}
+.narrative-text{font-size:0.67rem;color:var(--ink2);line-height:1.7;max-width:920px;}
+.narrative-text strong{color:var(--navy);font-weight:600;}
+.narrative-text em{font-style:italic;color:var(--teal);}
+
+/* DIAGRAM */
+.diagram-area{flex:1;overflow:hidden;position:relative;min-height:0;}
+.stage-wrap{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;cursor:grab;user-select:none;}
+.stage-wrap:active{cursor:grabbing;}
+.stage-wrap::-webkit-scrollbar{height:4px;}
+.stage-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.stage{position:relative;height:100%;}
+.paths-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+
+/* SEMESTER BANDS */
+.sem-band{position:absolute;top:0;bottom:0;pointer-events:none;z-index:0;}
+.sem-label{position:absolute;top:10px;font-size:0.78rem;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;opacity:0.55;pointer-events:none;z-index:3;}
+
+/* CLASSES BEGIN — vertical timeline marker */
+.classes-marker{
+  position:absolute;top:0;bottom:0;width:2px;
+  background:repeating-linear-gradient(to bottom,var(--slate) 0px,var(--slate) 8px,transparent 8px,transparent 14px);
+  opacity:0.35;z-index:6;pointer-events:none;
+}
+.classes-marker-label{
+  position:absolute;top:10px;
+  font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+  color:var(--slate);opacity:0.7;
+  writing-mode:vertical-rl;
+  padding:4px 0;z-index:7;pointer-events:none;
+  background:rgba(255,255,255,0.75);border-radius:3px;
+}
+
+/* MONTH COLUMNS */
+.month-col{position:absolute;top:0;bottom:0;width:1px;background:var(--border);pointer-events:none;z-index:2;opacity:0.35;}
+.month-lbl{position:absolute;top:0;font-size:0.5rem;color:var(--navy);letter-spacing:1.5px;text-transform:uppercase;writing-mode:vertical-rl;padding:44px 4px 8px;z-index:3;pointer-events:none;font-weight:700;opacity:0.65;}
+
+/* CLICKABLE LINE LABEL */
+.line-label{
+  position:absolute;z-index:22;cursor:pointer;
+  font-size:0.58rem;font-weight:700;
+  padding:3px 9px;border-radius:20px;
+  background:rgba(255,255,255,0.9);
+  border:1.5px solid;
+  white-space:nowrap;
+  transform:translate(-50%,-50%);
+  transition:all 0.2s;
+  box-shadow:0 1px 4px rgba(0,0,0,0.08);
+}
+.line-label:hover{box-shadow:0 2px 10px rgba(0,0,0,0.15);transform:translate(-50%,-50%) scale(1.05);}
+
+/* NODE */
+.node{position:absolute;z-index:20;transform:translate(-50%,-50%);cursor:pointer;}
+.node-ring{position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--nc);opacity:0;transform:scale(0.8);transition:all 0.3s;pointer-events:none;}
+.node:hover .node-ring{opacity:0.22;transform:scale(1);}
+.node-body{width:var(--ns,46px);height:var(--ns,46px);border-radius:50%;background:var(--surface);border:2.5px solid var(--nc);display:flex;align-items:center;justify-content:center;transition:all 0.22s;box-shadow:0 2px 10px rgba(0,0,0,0.09);position:relative;z-index:2;}
+.node-body svg{stroke:var(--nc);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;flex-shrink:0;}
+.node:hover .node-body,.node.active .node-body{box-shadow:0 4px 18px rgba(0,0,0,0.14);transform:scale(1.07);background:var(--nc-lt,#f8f7f4);}
+.node.emphasis::before{content:'';position:absolute;inset:-9px;border-radius:50%;border:2px dashed var(--nc);opacity:0.35;animation:emphPulse 2.2s infinite;pointer-events:none;}
+@keyframes emphPulse{0%,100%{transform:scale(1);opacity:0.35}50%{transform:scale(1.07);opacity:0.6}}
+.node.emphasis .node-body{border-width:3px;}
+.rbadge{position:absolute;bottom:-1px;right:-1px;width:17px;height:17px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;z-index:4;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,0.09);}
+.rbadge svg{width:8px;height:8px;stroke:var(--ink3);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.node-lbl{position:absolute;width:96px;text-align:center;font-size:0.6rem;font-weight:600;color:var(--nc);line-height:1.35;pointer-events:none;white-space:normal;background:rgba(255,255,255,0.88);padding:2px 5px;border-radius:5px;box-shadow:0 0 0 1px rgba(0,0,0,0.04);}
+.node-lbl.above{bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);}
+.node-lbl.below{top:calc(100% + 7px);left:50%;transform:translateX(-50%);}
+
+/* EXPAND NODE */
+.expand-node .node-body{border-style:dashed;}
+.expand-node .plus-icon{transition:transform 0.3s;display:block;}
+.expand-node.open .plus-icon{transform:rotate(45deg);}
+
+/* SUPPORT DRAWER */
+.support-drawer{position:absolute;z-index:100;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:10px;width:224px;box-shadow:0 6px 28px rgba(0,0,0,0.13);display:none;flex-direction:column;gap:4px;transform:translateX(-50%);max-height:280px;overflow-y:auto;scrollbar-width:thin;}
+.support-drawer::-webkit-scrollbar{width:4px;}
+.support-drawer::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.support-drawer.open{display:flex;}
+.drawer-title{font-size:0.51rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);padding-bottom:6px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2;}
+.drawer-tier-label{font-size:0.47rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 4px 2px;color:var(--ink3);background:var(--surface);z-index:1;}
+.support-item{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:7px;cursor:pointer;border:1px solid transparent;transition:all 0.15s;flex-shrink:0;}
+.support-item:hover{border-color:var(--si-color);background:var(--si-hover,#f8f7f4);}
+.support-item-icon{width:26px;height:26px;border-radius:6px;flex-shrink:0;background:var(--si-bg,#f0f0f0);border:1px solid var(--si-color);display:flex;align-items:center;justify-content:center;}
+.support-item-icon svg{width:12px;height:12px;stroke:var(--si-color);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.support-item-name{font-size:0.62rem;font-weight:600;color:var(--ink);line-height:1.2;}
+.support-item-sub{font-size:0.51rem;color:var(--ink3);margin-top:1px;}
+
+/* PATH LABEL */
+.path-label{position:absolute;z-index:15;font-size:0.5rem;font-weight:700;padding:2px 7px;border-radius:6px;pointer-events:none;white-space:nowrap;background:rgba(255,255,255,0.82);border:1px solid rgba(0,0,0,0.07);}
+
+/* AVATAR */
+.avatar{position:absolute;z-index:30;pointer-events:none;transition:left 0.7s cubic-bezier(0.4,0,0.2,1),top 0.7s cubic-bezier(0.4,0,0.2,1);}
+.avatar-glow{position:absolute;inset:-8px;border-radius:50%;background:radial-gradient(circle,rgba(13,122,110,0.15) 0%,transparent 70%);animation:ag 2.5s infinite;}
+@keyframes ag{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.3);opacity:1}}
+.avatar-body{width:26px;height:26px;border-radius:50%;background:var(--surface);border:2.5px solid var(--teal);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(13,122,110,0.28);}
+.avatar-body svg{width:12px;height:12px;stroke:var(--teal);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+/* SIDE PANEL */
+.side-panel{position:fixed;top:0;right:-340px;bottom:38px;width:310px;background:var(--surface);border-left:1.5px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,0.08);z-index:60;transition:right 0.4s cubic-bezier(0.16,1,0.3,1);overflow-y:auto;padding:18px 18px 28px;display:flex;flex-direction:column;}
+.side-panel.open{right:0;}
+.sp-close{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:var(--bg);border:1px solid var(--border);color:var(--ink3);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.sp-close:hover{background:var(--border);color:var(--ink);}
+.sp-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0;}
+.sp-icon svg{stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.sp-month{font-size:0.55rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--spc,var(--teal));margin-bottom:3px;}
+.sp-title{font-family:'Playfair Display',serif;font-size:1.08rem;color:var(--navy);margin-bottom:7px;line-height:1.25;}
+.sp-bar{height:2.5px;width:30px;border-radius:2px;background:var(--spc,var(--teal));margin-bottom:10px;}
+.sp-desc{font-size:0.76rem;color:var(--ink2);line-height:1.85;margin-bottom:12px;}
+.sp-section{font-size:0.54rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:7px;}
+.sp-list{list-style:none;display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.sp-list li{font-size:0.74rem;color:var(--ink2);line-height:1.6;padding:7px 10px;background:var(--bg);border-left:2.5px solid var(--spc,var(--teal));border-radius:0 6px 6px 0;}
+.sp-roles{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.sp-role{font-size:0.59rem;padding:3px 8px;border-radius:8px;border:1px solid var(--border);color:var(--ink2);background:var(--bg);}
+.sp-note{padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:0.7rem;color:var(--ink2);line-height:1.65;font-style:italic;}
+
+/* TABS */
+.tabs-bar{flex-shrink:0;height:38px;background:var(--surface);border-top:1.5px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:40;}
+.tabs-year-label{font-size:0.65rem;font-weight:700;color:var(--navy);letter-spacing:0.5px;padding-right:14px;opacity:0.7;white-space:nowrap;}
+.tabs-divider{width:1px;height:20px;background:var(--border);margin-right:4px;flex-shrink:0;}
+.tab-btn{padding:0 14px;height:100%;font-size:0.62rem;font-weight:600;color:var(--ink3);cursor:pointer;border:none;background:none;border-bottom:2.5px solid transparent;transition:all 0.2s;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+.tab-btn:hover{color:var(--navy);}
+.tab-btn.active{color:var(--navy);border-bottom-color:var(--teal);}
+.tab-close-btn{margin-left:auto;padding:0 12px;height:100%;font-size:0.6rem;color:var(--ink3);cursor:pointer;border:none;background:none;display:flex;align-items:center;gap:4px;transition:color 0.2s;}
+.tab-close-btn:hover{color:var(--ink);}
+.tab-overlay{position:fixed;left:0;right:0;bottom:38px;background:var(--surface);border-top:1.5px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,0.07);z-index:45;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);max-height:175px;overflow-y:auto;}
+.tab-overlay.open{transform:translateY(0);}
+.tab-panel{display:none;padding:14px 22px 16px;}
+.tab-panel.active{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;}
+.stat-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 13px;min-width:130px;flex:1;}
+.stat-card-label{font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;}
+.stat-card-value{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy);line-height:1;margin-bottom:2px;}
+.stat-card-sub{font-size:0.58rem;color:var(--ink3);}
+.struggle-grid{display:flex;gap:7px;flex-wrap:wrap;}
+.struggle-tag{font-size:0.61rem;padding:4px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--ink2);}
+
+.scroll-hint{position:fixed;left:50%;bottom:50px;transform:translateX(-50%);font-size:0.55rem;color:var(--ink3);display:flex;align-items:center;gap:4px;z-index:55;animation:fh 5s forwards 3s;background:var(--surface);padding:4px 12px;border-radius:20px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.07);pointer-events:none;}
+@keyframes fh{to{opacity:0;}}
+.sarr{animation:sa 1s infinite;display:inline-block;}
+@keyframes sa{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Tracking and Supporting LUMS First Years</h1>
+    <p>Click any node or label to explore · Click ⊕ for support options · Drag to scroll</p>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#1a7a4a"></div>Good standing</div>
+    <div class="leg"><div class="leg-dot" style="background:#0d7a6e;width:18px;height:3px;border-radius:2px;border:none;background:repeating-linear-gradient(90deg,#0d7a6e 0,#0d7a6e 5px,transparent 5px,transparent 9px);"></div>1-course flag</div>
+    <div class="leg"><div class="leg-dot" style="background:#c0521a"></div>Low-level concern</div>
+    <div class="leg"><div class="leg-dot" style="background:#b03030"></div>Severe concerns / Probation</div>
+    <div class="leg"><div class="leg-dot" style="background:#7a1a1a"></div>Catastrophic / Case Coord.</div>
+    <div class="leg" style="border-left:1px solid var(--border);padding-left:10px;">
+      <div class="leg-role" style="background:#f5f2fc;"><svg width="11" height="11" viewBox="0 0 24 24" style="stroke:#6040a0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      Faculty
+    </div>
+    <div class="leg">
+      <div class="leg-role" style="background:#f0f3f8;"><svg width="11" height="11" viewBox="0 0 24 24" style="stroke:#3050a0;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+      School Advisors + OSA
+    </div>
+  </div>
+</header>
+
+<div class="narrative-bar">
+  <div class="narrative-text">
+    <strong>About this initiative</strong> — Over the past 1–2 years, LUMS has developed a structured approach to identifying and supporting first-year students early in the semester. This map traces a student's journey from Orientation through to year-end, showing how the university responds to different levels of concern — from open resources available to all, to intensive coordinated support for those who need it most. <em>Every pathway is designed around one principle: no student should struggle alone.</em>
+  </div>
+</div>
+
+<div class="diagram-area" id="diagramArea">
+  <div class="stage-wrap" id="stageWrap">
+    <div class="stage" id="stage">
+      <svg class="paths-svg" id="pathsSvg"></svg>
+      <div class="avatar" id="avatar">
+        <div class="avatar-glow"></div>
+        <div class="avatar-body"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs-bar">
+  <div class="tabs-year-label">Fall 2025–26</div>
+  <div class="tabs-divider"></div>
+  <button class="tab-btn" id="tab-stats" onclick="toggleTab('stats')">
+    <svg width="11" height="11" viewBox="0 0 24 24" style="stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Key Statistics
+  </button>
+  <button class="tab-btn" id="tab-struggles" onclick="toggleTab('struggles')">
+    <svg width="11" height="11" viewBox="0 0 24 24" style="stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Key Student Struggles Identified
+  </button>
+  <button class="tab-close-btn" id="tabCloseBtn" onclick="closeTab()" style="display:none;">✕ Close</button>
+</div>
+
+<div class="tab-overlay" id="tabOverlay">
+  <div class="tab-panel" id="panel-stats">
+    <div class="stat-card"><div class="stat-card-label">Students Identified</div><div class="stat-card-value">[X]</div><div class="stat-card-sub">Flagged by November</div></div>
+    <div class="stat-card"><div class="stat-card-label">Met with Advisor</div><div class="stat-card-value">[X]%</div><div class="stat-card-sub">Of flagged students</div></div>
+    <div class="stat-card"><div class="stat-card-label">Accessed Support</div><div class="stat-card-value">[X]%</div><div class="stat-card-sub">At least one additional service</div></div>
+    <div class="stat-card"><div class="stat-card-label">Avoided Probation</div><div class="stat-card-value">[X]%</div><div class="stat-card-sub">Of flagged students</div></div>
+    <div class="stat-card"><div class="stat-card-label">Not Flagged, Still Probated</div><div class="stat-card-value">[X]%</div><div class="stat-card-sub">Of probated students</div></div>
+    <div class="stat-card"><div class="stat-card-label">Attended Follow-up</div><div class="stat-card-value">[X]%</div><div class="stat-card-sub">Follow-up advising meeting</div></div>
+  </div>
+  <div class="tab-panel" id="panel-struggles">
+    <div class="struggle-grid">
+      <div class="struggle-tag">Course content difficulty</div><div class="struggle-tag">Workload management</div>
+      <div class="struggle-tag">Time management & commitments</div><div class="struggle-tag">Mental health (anxiety, stress)</div>
+      <div class="struggle-tag">Lack of quantitative skills</div><div class="struggle-tag">Navigating resources & deadlines</div>
+      <div class="struggle-tag">Social adjustment & friendships</div><div class="struggle-tag">Homesickness</div>
+      <div class="struggle-tag">Wrong major / future uncertainty</div><div class="struggle-tag">Extenuating personal circumstances</div>
+    </div>
+  </div>
+</div>
+
+<div class="side-panel" id="sidePanel">
+  <button class="sp-close" onclick="closePanel()">✕</button>
+  <div class="sp-icon" id="spIcon"></div>
+  <div class="sp-month" id="spMonth"></div>
+  <div class="sp-title" id="spTitle"></div>
+  <div class="sp-bar" id="spBar"></div>
+  <div class="sp-desc" id="spDesc"></div>
+  <div class="sp-roles" id="spRoles"></div>
+  <div class="sp-section" id="spSec"></div>
+  <ul class="sp-list" id="spList"></ul>
+  <div class="sp-note" id="spNote"></div>
+</div>
+
+<div class="scroll-hint">Drag to explore the full year <span class="sarr">→</span></div>
+
+<script>
+const IC={
+  student:`<circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>`,
+  book:`<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>`,
+  clip:`<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>`,
+  chart:`<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>`,
+  hand:`<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>`,
+  flag:`<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>`,
+  plus:`<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>`,
+  grad:`<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>`,
+  door:`<path d="M13 4H3a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-7"/><path d="M9 10h.01"/><path d="M15 4l5 5-5 5"/>`,
+  check:`<polyline points="20 6 9 17 4 12"/>`,
+  brain:`<path d="M9.5 2a2.5 2.5 0 0 1 5 0"/><path d="M14.5 2c2.76 0 5 2.24 5 5 0 1-.3 1.95-.8 2.74"/><path d="M19.5 9.5c.96.65 1.5 1.7 1.5 2.8 0 1.93-1.57 3.5-3.5 3.5"/><path d="M14 18.5c0 1.93-1.57 3.5-3.5 3.5S7 20.43 7 18.5"/><path d="M4.5 9.5C3.54 10.15 3 11.2 3 12.3c0 1.93 1.57 3.5 3.5 3.5"/><path d="M9.5 2C6.74 2 4.5 4.24 4.5 7c0 1 .3 1.95.8 2.74"/><line x1="12" y1="12" x2="12" y2="18.5"/>`,
+  users:`<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+  file:`<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>`,
+  link2:`<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>`,
+  news:`<path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="12" y1="9" x2="12" y2="21"/>`,
+  cal:`<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`,
+  mail:`<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>`,
+  alert2:`<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`,
+  zap:`<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>`,
+  fac:`<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+  adm:`<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>`,
+};
+function mkIcon(key,size=18,color='currentColor'){
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="stroke:${color};stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;">${IC[key]||IC.alert2}</svg>`;
+}
+
+// ── NOP Counsellor item (added to amber/red/catastrophic/probation) ──
+const S_NOP={id:'s_nop',name:'NOP Counsellor',sub:'Success planning for NOP students',icon:'users',color:'#5a3d8a',bg:'#f0eaf8',hover:'#e4d8f4',
+  month:'AS NEEDED',
+  desc:'A dedicated counsellor specifically to work on success planning for NOP (National Outreach Programme) students, connecting them with different supports across campus.',
+  points:['Tailored success planning for NOP first years','Connects student with relevant campus supports','Ongoing relationship through the academic year','Coordinates with advisors and CAPS where needed'],
+  roles:['NOP Counsellor','OSA'],
+  note:'NOP students may face unique challenges in transition — this dedicated support ensures they are not navigating them alone.'
+};
+
+const S_BASE=[
+  {id:'s_news',name:'Resource Newsletters',sub:'All students, year-round',icon:'news',color:'#0d7a6e',bg:'#e0f0ed',hover:'#c8e6e1',month:'YEAR-ROUND',desc:'All students receive regular newsletters listing every available support service and weekly events.',points:['Sent to entire first-year cohort','Lists CAPS, tutoring, events, petitions, accessibility and all resources','Students can self-refer at any time'],roles:['OSA'],note:'Even students doing well benefit from knowing what is available.'},
+  {id:'s_tutor',name:'Peer Tutoring',sub:'Open to all — no referral',icon:'book',color:'#0d7a6e',bg:'#e0f0ed',hover:'#c8e6e1',month:'YEAR-ROUND',desc:'Peer tutoring is open to all students without any referral. One-on-one and group sessions available.',points:['Writing, Reading, Communication, Argument building, Math','One-on-one and group sessions','No referral or flag needed'],roles:['Peer Tutors'],note:'Using tutoring proactively prevents problems from developing later.'},
+  {id:'s_events',name:'Events & Community',sub:'Campus life & social support',icon:'cal',color:'#0d7a6e',bg:'#e0f0ed',hover:'#c8e6e1',month:'YEAR-ROUND',desc:'Campus events and community activities support wellbeing and social adjustment.',points:['Social and cultural events throughout the year','Student clubs and extracurriculars','Community-building workshops'],roles:['OSA','Departments across campus'],note:'Students who feel they belong are more likely to seek help.'},
+  {id:'s_peer',name:'Peer Support',sub:'PALss, floor advisors, NOP',icon:'users',color:'#0d7a6e',bg:'#e0f0ed',hover:'#c8e6e1',month:'AS NEEDED',desc:'Trained senior students provide informal and formal support and encourage connections with services.',points:['PALss attached to every first year','Floor advisors in hostels','NOP peer mentors for NOP first years'],roles:['PALss','Floor Advisors','NOP Peer Mentors'],note:'Some students respond better to peer support than formal services.'},
+];
+const S_AMBER=[
+  {id:'a_caps',name:'CAPS',sub:'Mental health & wellbeing',icon:'brain',color:'#c0521a',bg:'#fdeee6',hover:'#f8ddd0',month:'AS NEEDED',desc:'Counselling and Psychological Services provide confidential mental health support.',points:['1-on-1 counselling — one-off and ongoing','Anxiety, stress, and adjustment support','Confidential: no info shared without consent','Emergency crisis support if needed'],roles:['CAPS Counsellors'],note:'The university provides a safe space for students to work through any wellbeing concerns.'},
+  {id:'a_nop',...S_NOP},
+  {id:'a_fac',name:'Faculty Support',sub:'Major, career & in-class help',icon:'fac',color:'#c0521a',bg:'#fdeee6',hover:'#f8ddd0',month:'AS NEEDED',desc:'Faculty advisors looped in for students struggling with major choice, future plans, or academic adjustment.',points:['Extra layer of support beyond advising','Help students engage with their classes','Especially for major, career, adjustment concerns'],roles:['Faculty Advisors'],note:'Faculty support will be further developed over time.'},
+];
+const S_RED=[
+  {id:'r_rem',name:'Peer Tutoring + Remedials',sub:'Foundational skill gaps',icon:'book',color:'#b03030',bg:'#fde8e8',hover:'#f8d4d4',month:'NOV – JAN',desc:'Targeted tutoring combined with winter break remedial support for foundational academic skill gaps.',points:['Matched to peer tutor for in-term support','Online remedial courses during winter break','Verbal, quant, and study skills covered','Pilot phase — participation encouraged'],roles:['Peer Tutors','OSA','Faculty'],note:'Remedials are still in pilot phase — not yet mandatory.'},
+  {id:'r_nop',...S_NOP,id:'r_nop'},
+  {id:'r_with',name:'Course / Semester Withdrawal',sub:'If needed — handled with care',icon:'file',color:'#8a96a8',bg:'#f0f2f4',hover:'#e4e8ed',month:'IF NEEDED',desc:'Withdrawing from a course or semester may be the right decision, evaluated carefully by staff advisors.',points:['Reasoning must be solid — all options discussed','Re-entry plan for semester withdrawal','Future course load planned for course withdrawal'],roles:['Staff Advisors','OSA','Case Coordinator','CAPS','Petitions Team','Medical Center','Accessibility & Inclusion'],note:'Withdrawal is not failure — it is a structured pause with a plan to return.'},
+];
+// Full set for severe/catastrophic/probation — all tiers including NOP
+const S_ALL=[...S_BASE,...S_AMBER,...S_RED];
+
+// ── Layout ─────────────────────────────────────────────────────
+const TOTAL_W=2900;
+
+const LANE={
+  green:  0.07,  // no concerns / good standing
+  one:    0.19,  // 1-course flag
+  main:   0.35,  // spine
+  amber:  0.49,  // optional / spr_fac
+  red:    0.63,  // severe / mandatory
+  catas:  0.77,  // catastrophic — BELOW red
+  prob:   0.63,  // probation shares red lane (different X)
+  sev:    0.77,  // spring severe outcome
+  sep:    0.90,  // separated
+};
+
+// X coords — Fall classes marker at 270, Spring at 1870
+const XM={fall:270, spring:1870};
+
+const X={
+  start:    90,
+  alert:    460,
+  osa:      640,
+  // Fall branches
+  fac_notif:820,  ok_supp:   1010,
+  opt_meet: 820,  amb_supp:  1010,
+  mand_meet:820,  red_supp:  1010,
+  cat_coord:820,  cat_supp:  1010,
+  // Fall GPA
+  fall_gpa: 1230,
+  fall_prob:1400,
+  enrol_rev:1560,
+  // Spring — compressed: marker at 1870, nodes from 1960
+  spr_green_supp:1960,
+  spr_red:   1960, spr_red_supp:2130,
+  spr_fac:   2130,
+  spring_gpa:2330,
+  // Outcomes — 3 separate X for clarity
+  yr_comp:   2560,  // green — no concerns
+  yr_low:    2560,  // slightly below green — low level
+  spr_sev:   2560,  // red lane
+  separated: 2560,  // grey
+};
+
+// ── Node data ──────────────────────────────────────────────────
+const nodeDefs=[
+
+  // SPINE
+  {id:'start',lane:'main',x:X.start,type:'node',icon:'student',color:'#0d7a6e',colorLt:'#e0f0ed',size:56,is:23,lp:'above',role:'admin',emphasis:false,
+   title:'Orientation',month:'AUGUST',
+   desc:'A new first-year student arrives at LUMS. Orientation is the gateway into university life — systems, people, and expectations to help the student prepare for their first semester.',
+   points:['Enrolment into courses','Introduction to university systems, policies and faculty','Chance to interact with PALss and members of their cohort','Settling into residential life','Support services and tip sheets shared via app, written material, and live sessions'],
+   roles:['Staff Advisors','OSA','PALss','Residential Staff','Registrar\'s Office'],
+   note:'The university wraps around the student from day one. This is the foundation everything else builds on.'},
+
+  {id:'alert',lane:'main',x:X.alert,type:'node',icon:'clip',color:'#c97c1a',colorLt:'#fef3e2',size:56,is:23,lp:'below',role:'faculty',emphasis:true,
+   title:'Early Alerts + Mid Term Grades Received',month:'MID-OCTOBER',
+   desc:'Faculty and TAs formally flag students showing concerning patterns, or upload mid-term grades on Zambeel. This is crucial — in Semester 1, the university has no prior GPA data to rely on.',
+   points:['Faculty submit Early Alert Forms for students of concern','Grades and attendance uploaded to Zambeel','Flags record absences, disengagement, poor performance'],
+   roles:['Faculty','TAs','OSA (receives data)','Staff Advisors (receive data)'],
+   note:'Early identification does not eliminate risk — but ensures students don\'t struggle alone and helps improve academic trajectories.'},
+
+  {id:'osa',lane:'main',x:X.osa,type:'node',icon:'chart',color:'#3d4f6a',colorLt:'#eef1f5',size:52,is:21,lp:'above',role:'admin',emphasis:false,
+   title:'OSA Reviews',month:'NOVEMBER',
+   desc:'OSA collates all flag data and works with Staff Advisors to assign risk levels. Each student is reviewed individually.',
+   points:['All course flags merged into individual profiles','Flagged in 1 course only → faculty informed to provide in-class support','More than 1 flag, low-level → offered optional advisor meeting','Multi-flagged, severe concerns → called for mandatory meeting','Very severe / catastrophic situations → immediate Case Coordinator involvement'],
+   roles:['OSA','Staff Advisors'],
+   note:'OSA is the coordination hub. The right response is matched to each student\'s individual situation.'},
+
+  // 1-COURSE FLAG → fac_notif
+  {id:'fac_notif',lane:'one',x:X.fac_notif,type:'node',icon:'mail',color:'#c97c1a',colorLt:'#fef3e2',size:42,is:17,lp:'below',role:'faculty',emphasis:false,
+   title:'Faculty Informed About Struggling Students',month:'NOVEMBER',
+   desc:'OSA sends faculty a direct update on students flagged only in their course. Faculty are encouraged to provide additional in-class support and check in as applicable.',
+   points:['Faculty informed of students flagged only in their class','Breakdown shared: flagged here only / optional meeting / mandatory meeting','Faculty encouraged to provide extra in-class support','Faculty may reach out to students individually','Student can still self-refer to any support service'],
+   roles:['OSA','Faculty'],
+   note:'Faculty are partners in this system — keeping them informed ensures in-class support complements formal advising.'},
+  {id:'ok_supp',lane:'one',x:X.ok_supp,type:'expand',color:'#0d7a6e',colorLt:'#e0f0ed',size:38,is:15,lp:'above',expandSupports:S_BASE,drawerDir:'down'},
+
+  // OPTIONAL MEETING
+  {id:'opt_meet',lane:'amber',x:X.opt_meet,type:'node',icon:'hand',color:'#c0521a',colorLt:'#fdeee6',size:50,is:20,lp:'above',role:'admin',emphasis:false,
+   title:'Optional Advisor Meeting',month:'NOVEMBER',
+   desc:'Students with low-level concerns are invited to meet with an advisor and a list of support options is shared. The focus is early, light-touch support before problems grow.',
+   points:['Optional meeting invite sent — attendance encouraged but voluntary','Advisor diagnoses concerns in a low-pressure conversation','Referrals made to relevant services if appropriate','List of resources sent to students to engage with'],
+   roles:['Staff Advisors'],
+   note:'A single conversation can prevent a small struggle from becoming a crisis.'},
+  {id:'amb_supp',lane:'amber',x:X.amb_supp,type:'expand',color:'#c0521a',colorLt:'#fdeee6',size:38,is:15,lp:'above',expandSupports:[...S_BASE,...S_AMBER],drawerDir:'down'},
+
+  // MANDATORY MEETING
+  {id:'mand_meet',lane:'red',x:X.mand_meet,type:'node',icon:'flag',color:'#b03030',colorLt:'#fde8e8',size:50,is:20,lp:'below',role:'admin',emphasis:false,
+   title:'Mandatory Advisor Meeting',month:'NOVEMBER',
+   desc:'Students flagged across multiple courses with severe concerns are called for a mandatory meeting. These students need proactive, structured support — not just an invitation.',
+   points:['Flagged in two or more courses with serious concerns','Attendance in meeting required','In-depth diagnosis of academic and non-academic factors'],
+   roles:['Staff Advisors'],
+   note:'Mandatory meetings ensure support and referrals so the student does not have to navigate their options alone.'},
+  {id:'red_supp',lane:'red',x:X.red_supp,type:'expand',color:'#b03030',colorLt:'#fde8e8',size:38,is:15,lp:'below',expandSupports:S_ALL,drawerDir:'up'},
+
+  // CATASTROPHIC — Case Coordinator first
+  {id:'cat_coord',lane:'catas',x:X.cat_coord,type:'node',icon:'zap',color:'#7a1a1a',colorLt:'#f5e0e0',size:50,is:20,lp:'below',role:'admin',emphasis:true,
+   title:'Case Coordinator — Immediate Involvement',month:'NOVEMBER',
+   desc:'For the most severe and catastrophic situations, a Case Coordinator is brought in immediately — before any other support pathway. These are students facing multi-layered crises that require coordinated institutional response.',
+   points:['Activated for very severe / catastrophic situations','Immediate coordination across CAPS, Medical, OSA, Faculty, and Academic Affairs','Single named contact assigned to the student throughout','Unified care plan established from day one','Regular reviews across all involved departments','Student relationship maintained until proper resolution is reached'],
+   roles:['Case Coordinator','School Advisors','CAPS','Medical Center','OSA','Faculty'],
+   note:'The Case Coordinator pathway signals the most serious level of institutional concern — a full-team response, not just a referral.'},
+  {id:'cat_supp',lane:'catas',x:X.cat_supp,type:'expand',color:'#7a1a1a',colorLt:'#f5e0e0',size:38,is:15,lp:'below',expandSupports:S_ALL,drawerDir:'up'},
+
+  // FALL GPA
+  {id:'fall_gpa',lane:'main',x:X.fall_gpa,type:'node',icon:'chart',color:'#3d4f6a',colorLt:'#eef1f5',size:54,is:22,lp:'above',role:'admin',emphasis:false,
+   title:'Fall GPAs Released',month:'JANUARY',
+   desc:'All Fall semester results are released. Every student — regardless of whether they were flagged — now has a formal academic standing. This is the key transition point into Spring planning.',
+   points:['GPA calculated across all Fall courses','Students placed in: Good Standing / Probation / Warning','Even students with no concerns may find themselves on probation','OSA and Staff Advisors review all probation cases'],
+   roles:['OSA','Staff Advisors','Registrar\'s Office'],
+   note:'GPA release is the formal checkpoint. It determines what support and planning is needed going into Spring.'},
+
+  // POST-FALL
+  {id:'fall_prob',lane:'prob',x:X.fall_prob,type:'node',icon:'alert2',color:'#b03030',colorLt:'#fde8e8',size:46,is:18,lp:'below',role:'admin',emphasis:false,
+   title:'Probation / Warning',month:'JANUARY',
+   desc:'Some students end the Fall semester on academic probation or warning — including students who were flagged and supported, as well as some who showed no concerns during the semester.',
+   points:['Academic standing below required threshold','Placed on probation or academic warning','Includes students who were and were not flagged in Fall','Triggers enrolment review and structured Spring planning'],
+   roles:['OSA','Staff Advisors'],
+   note:'Probation is not the end — it is a formal signal that structured support and careful planning are now essential.'},
+
+  {id:'enrol_rev',lane:'prob',x:X.enrol_rev,type:'node',icon:'clip',color:'#b03030',colorLt:'#fde8e8',size:46,is:18,lp:'below',role:'admin',emphasis:false,
+   title:'Enrolment Review',month:'JANUARY',
+   desc:'Probated students undergo an enrolment review to ensure their Spring course load is appropriate given their academic standing.',
+   points:['Course load evaluated based on GPA and composition','Number of credits adjusted to a manageable level','Goal: allow student to recover and improve GPA','Completed before Spring classes begin'],
+   roles:['Staff Advisors','OSA','Faculty Advisors'],
+   note:'A carefully planned course load is often the most powerful intervention for a probated student.'},
+
+  // SPRING — good standing dotted green line goes direct to spr_green_supp (no circle node)
+  {id:'spr_green_supp',lane:'green',x:X.spr_green_supp,type:'expand',color:'#1a7a4a',colorLt:'#e0f0e8',size:40,is:16,lp:'above',expandSupports:S_BASE,drawerDir:'down'},
+
+  // SPRING RED
+  {id:'spr_red',lane:'red',x:X.spr_red,type:'node',icon:'flag',color:'#b03030',colorLt:'#fde8e8',size:42,is:17,lp:'below',role:'admin',emphasis:false,
+   title:'Probated Students — Spring',month:'SPRING',
+   desc:'Probated students continue through Spring with structured support. They have mandatory check-ins, an adjusted course load, and access to the full range of support services.',
+   points:['Adjusted course load already confirmed from enrolment review','2–3 mandatory check-ins with Staff Advisor throughout Spring','Full range of support services available and actively encouraged','Progress monitored closely through to Spring GPA release'],
+   roles:['Staff Advisors','OSA','Faculty'],
+   note:'Spring is the recovery window for probated students — structured support makes a measurable difference.'},
+  {id:'spr_red_supp',lane:'red',x:X.spr_red_supp,type:'expand',color:'#b03030',colorLt:'#fde8e8',size:40,is:16,lp:'below',expandSupports:S_ALL,drawerDir:'up'},
+
+  // SPRING FAC — parallel to spr_red_supp
+  {id:'spr_fac',lane:'amber',x:X.spr_fac,type:'node',icon:'mail',color:'#b03030',colorLt:'#fde8e8',size:42,is:17,lp:'above',role:'faculty',emphasis:false,
+   title:'Faculty Informed About Probated Students',month:'FEBRUARY',
+   desc:'OSA proactively informs faculty about probated students enrolled in their Spring classes. Faculty are encouraged to provide additional in-class support.',
+   points:['Faculty notified of which students are on probation in their class','Encouraged to provide extra in-class support','2–3 mandatory check-ins between probated students and Staff Advisor','Faculty may reach out individually as appropriate'],
+   roles:['OSA','Faculty','Staff Advisors'],
+   note:'In Spring we know who needs support before the semester begins — proactive faculty outreach makes outreach more targeted.'},
+
+  // SPRING GPA
+  {id:'spring_gpa',lane:'main',x:X.spring_gpa,type:'node',icon:'chart',color:'#3d4f6a',colorLt:'#eef1f5',size:54,is:22,lp:'above',role:'admin',emphasis:false,
+   title:'Spring GPAs Released',month:'APRIL – MAY',
+   desc:'Spring semester results are released. This marks the end of the first year. Every student\'s academic standing is assessed — and three outcomes are possible.',
+   points:['Final first-year GPA calculated','Students assessed across three outcome categories','All students supported through the transition regardless of outcome'],
+   roles:['OSA','Staff Advisors','Registrar\'s Office','Academic Affairs'],
+   note:'This is the end of the first year. The system\'s goal has been to ensure every student reaches this point with support behind them.'},
+
+  // THREE OUTCOMES
+  {id:'yr_comp',lane:'green',x:X.yr_comp,type:'node',icon:'grad',color:'#1a7a4a',colorLt:'#e0f0e8',size:62,is:26,lp:'above',role:null,emphasis:false,
+   title:'Year Complete — No Concerns',month:'APRIL – MAY',
+   desc:'Student completes their first year in good standing with no concerns flagged throughout. A smooth journey with full access to support whenever needed.',
+   points:['Good academic standing maintained throughout','No formal flags or interventions required','Full support resources were available and accessible','Year 2 planning begins with advisor'],
+   roles:['Staff Advisors','Faculty Advisors'],
+   note:'Year Complete for no-concern students reflects the value of having an open, accessible support system available to all.'},
+
+  {id:'yr_low',lane:'one',x:X.yr_low,type:'node',icon:'grad',color:'#0d7a6e',colorLt:'#e0f0ed',size:56,is:23,lp:'above',role:null,emphasis:false,
+   title:'Year Complete — Low Level Concerns',month:'APRIL – MAY',
+   desc:'Student completes their first year. They may have had low-level concerns during the year but engaged with support and maintained their academic standing.',
+   points:['Academic standing maintained or recovered','Engaged with optional support services during the year','May have received newsletters, tutoring, or peer support','Year 2 planning begins with advisor','Students on warning are emailed full range of support options'],
+   roles:['Staff Advisors','OSA'],
+   note:'Even students with concerns can complete the year successfully — early support and open resources make the difference.'},
+
+  {id:'spr_sev',lane:'sev',x:X.spr_sev,type:'node',icon:'alert2',color:'#b03030',colorLt:'#fde8e8',size:48,is:19,lp:'below',role:'admin',emphasis:false,
+   title:'Severe Issues — Mandatory Review',month:'APRIL – MAY',
+   desc:'Students with severe academic outcomes — including probation, time-barred status, thrice failure, and other serious categories — undergo mandatory meetings and enrolment reviews. Next steps are determined by the university.',
+   points:['Includes probation, time-barred, thrice failure, and other serious categories','Mandatory meeting with Staff Advisor required','Enrolment review determines next steps','University reviews each case individually','Students informed of options and pathways forward','OSA continues to support through the decision process'],
+   roles:['OSA','Academic Affairs','Staff Advisors'],
+   note:'Even at this stage the university\'s goal is to support the student — not simply to close their case.'},
+
+  {id:'separated',lane:'sep',x:X.separated,type:'node',icon:'door',color:'#8a96a8',colorLt:'#f0f2f4',size:48,is:19,lp:'below',role:null,emphasis:false,
+   title:'Separated / Dropped Out',month:'IF APPLICABLE',
+   desc:'A small number of students may be separated from the university or choose to drop out — due to academic standing, medical reasons, or personal circumstances. This is not the end of the road.',
+   points:['Separation may be voluntary or academic','OSA supports the student through the process with care and documentation','Students informed of readmission pathways before leaving','Readmission reviewed on a case-by-case basis','Students may re-apply after demonstrating readiness','Connections to external counselling and support provided'],
+   roles:['Admin / OSA','Academic Affairs','CAPS'],
+   note:'Separation is handled with dignity and a forward plan. The university\'s relationship with the student does not end here.'},
+];
+
+// ── Clickable line labels (behave like nodes but sit on a path) ──
+const lineLabelDefs=[
+  {id:'ll_noconcern',
+   fromX: XM.fall, toX: X.ok_supp,
+   lane:'green',
+   color:'#0d7a6e', borderColor:'#0d7a6e',
+   text:'No concerns flagged',
+   panelData:{icon:'check',color:'#0d7a6e',colorLt:'#e0f0ed',month:'OCTOBER ONWARDS',title:'No Concerns Flagged',desc:'Some students sail through with no flags raised. The support system remains available — but no formal intervention is needed.',points:['Good attendance and consistent performance','Managing workload independently','No faculty alerts raised across any course','All support services open by self-referral'],roles:['Student (independent)'],note:'Students doing well are not forgotten — resources and newsletters keep them connected to available support.'}
+  },
+  {id:'ll_goodstand',
+   fromX: X.fall_gpa, toX: X.spr_green_supp,
+   lane:'green',
+   color:'#1a7a4a', borderColor:'#1a7a4a',
+   text:'Good Standing',
+   panelData:{icon:'check',color:'#1a7a4a',colorLt:'#e0f0e8',month:'JANUARY',title:'Good Standing',desc:'Students who have maintained or improved their academic standing proceed into Spring. This includes students who were flagged and supported in Fall and have recovered.',points:['GPA in good standing','No probation or warning issued','Proceed to Spring with full support options available','May still self-refer to any support service'],roles:['Student (continues independently)'],note:'Recovery is the goal of the entire support system — and it is achievable.'}
+  },
+];
+
+// ── Edges ──────────────────────────────────────────────────────
+const edgeDefs=[
+  // Spine: start → alert → osa
+  {f:'start',    t:'alert',     c:'#0d7a6e',d:false,lbl:null},
+  {f:'alert',    t:'osa',       c:'#c97c1a',d:false,lbl:null},
+
+  // 1-course: OSA → fac_notif → ok_supp
+  {f:'osa',      t:'fac_notif', c:'#c97c1a',d:false,lbl:'Flagged in 1 course only'},
+  {f:'fac_notif',t:'ok_supp',   c:'#c97c1a',d:true, lbl:null},
+
+  // Amber: OSA → opt_meet → amb_supp → fall_gpa
+  {f:'osa',      t:'opt_meet',  c:'#c0521a',d:false,lbl:'Low-level concerns'},
+  {f:'opt_meet', t:'amb_supp',  c:'#c0521a',d:false,lbl:null},
+  {f:'amb_supp', t:'fall_gpa',  c:'#c0521a',d:false,lbl:null},
+
+  // Red: OSA → mand_meet → red_supp → fall_gpa
+  {f:'osa',      t:'mand_meet', c:'#b03030',d:false,lbl:'Severe concerns'},
+  {f:'mand_meet',t:'red_supp',  c:'#b03030',d:false,lbl:null},
+  {f:'red_supp', t:'fall_gpa',  c:'#b03030',d:false,lbl:null},
+
+  // Catastrophic: OSA → cat_coord → cat_supp → fall_gpa
+  {f:'osa',      t:'cat_coord', c:'#7a1a1a',d:false,lbl:'Very severe / Catastrophic'},
+  {f:'cat_coord',t:'cat_supp',  c:'#7a1a1a',d:false,lbl:null},
+  {f:'cat_supp', t:'fall_gpa',  c:'#7a1a1a',d:false,lbl:null},
+
+  // ok_supp → fall_gpa (green dotted — no concerns path)
+  {f:'ok_supp',  t:'fall_gpa',  c:'#0d7a6e',d:true, lbl:null},
+
+  // Fall GPA split
+  // good standing → spr_green_supp (dotted green, crosses spring marker)
+  {f:'fall_gpa', t:'spr_green_supp',c:'#1a7a4a',d:true,lbl:null},
+  // probation
+  {f:'fall_gpa', t:'fall_prob',  c:'#b03030',d:false,lbl:'Probation / Warning'},
+  {f:'fall_prob',t:'enrol_rev',  c:'#b03030',d:false,lbl:null},
+  {f:'enrol_rev',t:'spr_red',    c:'#b03030',d:false,lbl:null},
+
+  // Spring
+  {f:'spr_red',  t:'spr_red_supp',c:'#b03030',d:false,lbl:null},
+  {f:'spr_red',  t:'spr_fac',    c:'#b03030',d:false,lbl:'Faculty informed'},
+  {f:'spr_green_supp',t:'spring_gpa',c:'#1a7a4a',d:false,lbl:null},
+  {f:'spr_red_supp',  t:'spring_gpa',c:'#b03030',d:false,lbl:null},
+  {f:'spr_fac',       t:'spring_gpa',c:'#b03030',d:true, lbl:null},
+
+  // Spring GPA → 3 separate outcomes
+  {f:'spring_gpa',t:'yr_comp',  c:'#1a7a4a',d:false,lbl:'No concerns'},
+  {f:'spring_gpa',t:'yr_low',   c:'#0d7a6e',d:false,lbl:'Low-level concerns'},
+  {f:'spring_gpa',t:'spr_sev',  c:'#b03030',d:false,lbl:'Severe issues'},
+  {f:'spring_gpa',t:'separated',c:'#8a96a8',d:true, lbl:'Separated / Dropped out'},
+];
+
+let nmap={}, activeNodeId=null, openDrawerId=null;
+function H(){return document.getElementById('diagramArea').offsetHeight;}
+
+function computePositions(){
+  nodeDefs.forEach(nd=>{ nmap[nd.id]={nd,pos:{x:nd.x,y:LANE[nd.lane]*H()}}; });
+  // line labels: midpoint between fromX and toX on their lane
+  lineLabelDefs.forEach(ll=>{
+    const mx=(ll.fromX+ll.toX)/2;
+    nmap[ll.id]={ll,pos:{x:mx,y:LANE[ll.lane]*H()},isLineLabel:true};
+  });
+}
+
+function buildAll(){
+  const stage=document.getElementById('stage');
+  const svg=document.getElementById('pathsSvg');
+  const h=H();
+  stage.style.width=TOTAL_W+'px';
+  svg.setAttribute('viewBox',`0 0 ${TOTAL_W} ${h}`);
+
+  // Semester bands
+  const fallBand=document.createElement('div');
+  fallBand.className='sem-band';
+  fallBand.style.cssText=`left:0;width:${XM.spring-30}px;background:#ede8f5;opacity:0.45;`;
+  stage.appendChild(fallBand);
+  const sprBand=document.createElement('div');
+  sprBand.className='sem-band';
+  sprBand.style.cssText=`left:${XM.spring-30}px;right:0;background:#e4eaf8;opacity:0.45;`;
+  stage.appendChild(sprBand);
+
+  // Semester labels
+  [{text:'FALL SEMESTER',x:X.start+80,color:'#6040a0'},{text:'SPRING SEMESTER',x:XM.spring+60,color:'#3050a0'}].forEach(sl=>{
+    const d=document.createElement('div');
+    d.className='sem-label'; d.textContent=sl.text;
+    d.style.cssText=`left:${sl.x}px;color:${sl.color};`;
+    stage.appendChild(d);
+  });
+
+  // Classes begin markers
+  [{x:XM.fall,label:'Fall Classes Begin'},{x:XM.spring,label:'Spring Classes Begin'}].forEach(m=>{
+    const line=document.createElement('div');
+    line.className='classes-marker'; line.style.left=m.x+'px';
+    stage.appendChild(line);
+    const lbl=document.createElement('div');
+    lbl.className='classes-marker-label'; lbl.textContent=m.label;
+    lbl.style.cssText=`left:${m.x+4}px;top:10px;`;
+    stage.appendChild(lbl);
+  });
+
+  // Month columns
+  [{l:'AUG',x:55},{l:'SEPT',x:210},{l:'OCT',x:390},{l:'NOV',x:570},
+   {l:'DEC–JAN',x:1060},{l:'JAN',x:1290},{l:'FEB',x:1800},{l:'FEB–APR',x:2060},{l:'APR–MAY',x:2290}
+  ].forEach(m=>{
+    const col=document.createElement('div');
+    col.className='month-col'; col.style.left=m.x+'px'; stage.appendChild(col);
+    const lbl=document.createElement('div');
+    lbl.className='month-lbl'; lbl.textContent=m.l; lbl.style.left=(m.x+4)+'px'; stage.appendChild(lbl);
+  });
+
+  // Edges
+  edgeDefs.forEach(e=>{
+    const f=nmap[e.f],t=nmap[e.t]; if(!f||!t) return;
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    const dx=t.pos.x-f.pos.x;
+    p.setAttribute('d',`M ${f.pos.x} ${f.pos.y} C ${f.pos.x+dx*0.42} ${f.pos.y}, ${t.pos.x-dx*0.42} ${t.pos.y}, ${t.pos.x} ${t.pos.y}`);
+    p.setAttribute('fill','none'); p.setAttribute('stroke',e.c);
+    p.setAttribute('stroke-width','2.5'); p.setAttribute('stroke-opacity','0.48');
+    if(e.d) p.setAttribute('stroke-dasharray','8 5');
+    svg.appendChild(p);
+    if(e.lbl){
+      const mx=(f.pos.x+t.pos.x)/2-40, my=(f.pos.y+t.pos.y)/2-10;
+      const div=document.createElement('div');
+      div.className='path-label'; div.textContent=e.lbl;
+      div.style.cssText=`left:${mx}px;top:${my}px;color:${e.c};`;
+      stage.appendChild(div);
+    }
+  });
+
+  // Clickable line labels
+  lineLabelDefs.forEach(ll=>{
+    const pos=nmap[ll.id].pos;
+    const div=document.createElement('div');
+    div.className='line-label';
+    div.id='ll_'+ll.id;
+    div.textContent=ll.text;
+    div.style.cssText=`left:${pos.x}px;top:${pos.y}px;color:${ll.color};border-color:${ll.borderColor};`;
+    div.addEventListener('click',e=>{
+      e.stopPropagation(); closeDrawers();
+      placeAvatar(ll.id);
+      openPanel(ll.panelData);
+    });
+    stage.appendChild(div);
+  });
+
+  // Nodes
+  nodeDefs.forEach(nd=>{
+    const {pos}=nmap[nd.id];
+    if(nd.type==='expand') buildExpandNode(nd,pos,stage);
+    else buildNode(nd,pos,stage);
+  });
+
+  placeAvatar('start');
+}
+
+function buildNode(nd,pos,stage){
+  const div=document.createElement('div');
+  div.className='node'+(nd.emphasis?' emphasis':'');
+  div.id='nd_'+nd.id;
+  div.style.cssText=`left:${pos.x}px;top:${pos.y}px;--nc:${nd.color};--nc-lt:${nd.colorLt};--ns:${nd.size}px;`;
+  let badge='';
+  if(nd.role==='faculty') badge=`<div class="rbadge"><svg viewBox="0 0 24 24">${IC.fac}</svg></div>`;
+  if(nd.role==='admin')   badge=`<div class="rbadge"><svg viewBox="0 0 24 24">${IC.adm}</svg></div>`;
+  div.innerHTML=`<div class="node-ring"></div><div class="node-body">${mkIcon(nd.icon,nd.is,nd.color)}${badge}</div><div class="node-lbl ${nd.lp||'above'}">${nd.title}</div>`;
+  div.addEventListener('click',()=>{ closeDrawers(); selectNode(nd.id); });
+  stage.appendChild(div);
+}
+
+function buildExpandNode(nd,pos,stage){
+  const div=document.createElement('div');
+  div.className='node expand-node';
+  div.id='nd_'+nd.id;
+  div.style.cssText=`left:${pos.x}px;top:${pos.y}px;--nc:${nd.color};--nc-lt:${nd.colorLt};--ns:${nd.size}px;`;
+  div.innerHTML=`<div class="node-ring"></div><div class="node-body"><svg class="plus-icon" viewBox="0 0 24 24" width="${nd.is}" height="${nd.is}" style="stroke:${nd.color};stroke-width:2.2;fill:none;stroke-linecap:round;">${IC.plus}</svg></div><div class="node-lbl ${nd.lp||'above'}" style="width:76px;font-size:0.56rem;">Support Options</div>`;
+  const drawer=document.createElement('div');
+  drawer.className='support-drawer'; drawer.id='drawer_'+nd.id;
+  const titleEl=document.createElement('div'); titleEl.className='drawer-title'; titleEl.textContent='Available Support'; drawer.appendChild(titleEl);
+  const supports=nd.expandSupports||[];
+  const isAll=supports.length>6;
+  if(isAll){
+    [{label:'Open to All Students',ids:['s_news','s_tutor','s_events','s_peer']},
+     {label:'Referred by Advisor',ids:['a_caps','a_nop','a_fac']},
+     {label:'Intensive Support',ids:['r_rem','r_nop','r_with']}
+    ].forEach(tier=>{
+      const items=supports.filter(s=>tier.ids.includes(s.id));
+      if(!items.length) return;
+      const tl=document.createElement('div'); tl.className='drawer-tier-label'; tl.textContent=tier.label; drawer.appendChild(tl);
+      items.forEach(s=>drawer.appendChild(makeSupportItem(s)));
+    });
+  } else { supports.forEach(s=>drawer.appendChild(makeSupportItem(s))); }
+  if(nd.drawerDir==='up'){ drawer.style.bottom=(nd.size/2+10)+'px'; drawer.style.top='auto'; }
+  else { drawer.style.top=(nd.size/2+10)+'px'; }
+  div.appendChild(drawer);
+  div.addEventListener('click',e=>{ e.stopPropagation(); toggleDrawer(nd.id,div); });
+  stage.appendChild(div);
+}
+
+function makeSupportItem(s){
+  const item=document.createElement('div');
+  item.className='support-item';
+  item.style.setProperty('--si-color',s.color); item.style.setProperty('--si-bg',s.bg); item.style.setProperty('--si-hover',s.hover);
+  item.innerHTML=`<div class="support-item-icon">${mkIcon(s.icon,12,s.color)}</div><div class="support-item-text"><div class="support-item-name">${s.name}</div><div class="support-item-sub">${s.sub}</div></div>`;
+  item.addEventListener('click',e=>{ e.stopPropagation(); openPanel({icon:s.icon,color:s.color,colorLt:s.bg,month:s.month,title:s.name,desc:s.desc,points:s.points,roles:s.roles,note:s.note}); });
+  return item;
+}
+
+function toggleDrawer(id,divEl){
+  const drawer=document.getElementById('drawer_'+id);
+  const isOpen=drawer.classList.contains('open');
+  closeDrawers();
+  if(!isOpen){ drawer.classList.add('open'); divEl.classList.add('open'); openDrawerId=id; placeAvatar(id); }
+}
+
+function closeDrawers(){
+  if(openDrawerId){
+    document.getElementById('drawer_'+openDrawerId)?.classList.remove('open');
+    document.getElementById('nd_'+openDrawerId)?.classList.remove('open');
+    openDrawerId=null;
+  }
+}
+
+function selectNode(id){
+  const d=nmap[id]; if(!d||d.isLineLabel) return;
+  placeAvatar(id);
+  if(activeNodeId) document.getElementById('nd_'+activeNodeId)?.classList.remove('active');
+  document.getElementById('nd_'+id)?.classList.add('active');
+  activeNodeId=id;
+  const wrap=document.getElementById('stageWrap');
+  wrap.scrollTo({left:Math.max(0,d.pos.x-(wrap.offsetWidth-310)/2),behavior:'smooth'});
+  const nd=d.nd;
+  openPanel({icon:nd.icon,color:nd.color,colorLt:nd.colorLt,month:nd.month,title:nd.title,desc:nd.desc,points:nd.points,roles:nd.roles,note:nd.note});
+}
+
+function openPanel(data){
+  closeTab();
+  const panel=document.getElementById('sidePanel');
+  panel.style.setProperty('--spc',data.color);
+  document.getElementById('spIcon').innerHTML=mkIcon(data.icon,19,data.color);
+  document.getElementById('spIcon').style.cssText=`background:${data.colorLt||'#f8f7f4'};border-color:${data.color};border:1.5px solid;width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0;`;
+  document.getElementById('spMonth').textContent=data.month||'';
+  document.getElementById('spTitle').textContent=data.title;
+  document.getElementById('spBar').style.background=data.color;
+  document.getElementById('spDesc').textContent=data.desc||'';
+  document.getElementById('spList').innerHTML=(data.points||[]).map(p=>`<li>${p}</li>`).join('');
+  document.getElementById('spRoles').innerHTML=(data.roles||[]).map(r=>`<span class="sp-role">${r}</span>`).join('');
+  document.getElementById('spSec').textContent=(data.points||[]).length?'Key Activities':'';
+  document.getElementById('spNote').textContent=data.note||'';
+  panel.classList.add('open');
+}
+
+function closePanel(){
+  document.getElementById('sidePanel').classList.remove('open');
+  if(activeNodeId){ document.getElementById('nd_'+activeNodeId)?.classList.remove('active'); activeNodeId=null; }
+}
+
+function placeAvatar(id){
+  const d=nmap[id]; if(!d) return;
+  const av=document.getElementById('avatar');
+  av.style.left=(d.pos.x-13)+'px'; av.style.top=(d.pos.y-13)+'px';
+}
+
+let activeTab=null;
+function toggleTab(id){
+  const overlay=document.getElementById('tabOverlay');
+  const closeBtn=document.getElementById('tabCloseBtn');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(activeTab===id){ overlay.classList.remove('open'); closeBtn.style.display='none'; activeTab=null; return; }
+  activeTab=id;
+  const panelEl=document.getElementById('panel-'+id);
+  const btnEl=document.getElementById('tab-'+id);
+  if(panelEl) panelEl.classList.add('active');
+  if(btnEl) btnEl.classList.add('active');
+  overlay.classList.add('open'); closeBtn.style.display='flex';
+}
+function closeTab(){
+  const overlay=document.getElementById('tabOverlay');
+  const closeBtn=document.getElementById('tabCloseBtn');
+  if(overlay) overlay.classList.remove('open');
+  if(closeBtn) closeBtn.style.display='none';
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  activeTab=null;
+}
+
+document.getElementById('diagramArea').addEventListener('click',()=>closeDrawers());
+
+let drag=false,sx,ss;
+const wrap=document.getElementById('stageWrap');
+wrap.addEventListener('mousedown',e=>{drag=true;sx=e.pageX;ss=wrap.scrollLeft;e.preventDefault();});
+wrap.addEventListener('mousemove',e=>{if(drag)wrap.scrollLeft=ss-(e.pageX-sx);});
+['mouseup','mouseleave'].forEach(ev=>wrap.addEventListener(ev,()=>drag=false));
+wrap.addEventListener('touchstart',e=>{sx=e.touches[0].pageX;ss=wrap.scrollLeft;});
+wrap.addEventListener('touchmove',e=>{wrap.scrollLeft=ss-(e.touches[0].pageX-sx);});
+
+window.addEventListener('load',()=>{ computePositions(); buildAll(); });
+window.addEventListener('resize',()=>{
+  const s=document.getElementById('stage');
+  s.innerHTML='<svg class="paths-svg" id="pathsSvg"></svg>';
+  const av=document.createElement('div');
+  av.className='avatar'; av.id='avatar';
+  av.innerHTML=`<div class="avatar-glow"></div><div class="avatar-body">${mkIcon('student',12,'#0d7a6e')}</div>`;
+  s.appendChild(av); nmap={}; computePositions(); buildAll();
+});
+</script>
+</body>
+</html>
